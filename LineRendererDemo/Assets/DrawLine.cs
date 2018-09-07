@@ -120,9 +120,6 @@ public class DrawLine : MonoBehaviour
         // If start point inside an obstacle find appropriate
         // point to start line.
 
-        Debug.Log("last: " + start);
-        Debug.Log("now: " + end);
-
         Collider2D[] cols = Physics2D.OverlapPointAll(start);
         foreach (Collider2D col in cols)
         {
@@ -141,7 +138,7 @@ public class DrawLine : MonoBehaviour
                         CreateCircle(newStart);
                         resetLine = false;
                         mousePosition = GetAppropriateEndPoint(points[points.Count - 1], mousePosition);
-                        Debug.Log("hi");
+
                         return;
                     }
                 }
