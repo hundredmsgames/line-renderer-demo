@@ -58,16 +58,16 @@ public class DrawLine : MonoBehaviour
             }
         }
 
-        if (points.Count > 0)
+        if (resetLine == false)
         {
-            if (resetLine == false)
+            if (points.Count > 0)
             {
                 mousePosition = GetAppropriateEndPoint(points[points.Count - 1], mousePosition);
             }
-            else
-            {
-                FindAppropriateStartPoint(lastMousePos, mousePosition);
-            }
+        }
+        else
+        {
+            FindAppropriateStartPoint(lastMousePos, mousePosition);
         }
 
         if (!points.Contains(mousePosition))
