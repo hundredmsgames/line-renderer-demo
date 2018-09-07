@@ -133,13 +133,15 @@ public class DrawLine : MonoBehaviour
 
                 foreach (RaycastHit2D hit in hits)
                 {
-                    if (hit.collider.tag != "DrawLine")
+                    if (hit.collider.tag != "DrawLine" && hit.collider == col)
                     {
                         // Add new start point in here. I don't know how to do it else.
                         Vector2 newStart = hit.point + hit.normal * lineRadius;
                         points.Add(newStart);
                         CreateCircle(newStart);
                         resetLine = false;
+                        mousePosition = GetAppropriateEndPoint(points[points.Count - 1], mousePosition);
+                        Debug.Log("hi");
                         return;
                     }
                 }
