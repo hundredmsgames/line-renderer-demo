@@ -12,6 +12,8 @@ public class DrawLine : MonoBehaviour
     private List<GameObject> lineGoList;
     private List<GameObject> circleGoList;
     private List<Vector2> points;
+    private Vector2 mousePosition;
+    private Vector2 lastMousePos;
 
     private float lineWidth = 0.2f;
     private bool resetLine;
@@ -30,22 +32,42 @@ public class DrawLine : MonoBehaviour
         if (EventSystem.current.IsPointerOverGameObject())
             return;
 
+        mousePosition = mainCamera.ScreenToWorldPoint(Input.mousePosition);
+
         if (Input.GetMouseButtonDown(0))
         {
             resetLine = true;
         }
 
         if (Input.GetMouseButton(0))
+        {
             Draw();
+        }
+
+        lastMousePos = mousePosition;
     }
 
     private void Draw()
     {
-        Vector2 mousePosition = mainCamera.ScreenToWorldPoint(Input.mousePosition);
-
-        if (points.Count > 0 && resetLine == false)
+        Collider2D[] cols = Physics2D.OverlapPointAll(mousePosition);
+        foreach (Collider2D col in cols)
         {
-            mousePosition = GetProperEndPoint(points[points.Count - 1], mousePosition);
+            if (col.tag != "DrawLine" && resetLine == true)
+            {
+                return;
+            }
+        }
+
+        if (points.Count > 0)
+        {
+            if (resetLine == false)
+            {
+                mousePosition = GetAppropriateEndPoint(points[points.Count - 1], mousePosition);
+            }
+            else
+            {
+                FindAppropriateStartPoint(lastMousePos, mousePosition);
+            }
         }
 
         if (!points.Contains(mousePosition))
@@ -57,39 +79,75 @@ public class DrawLine : MonoBehaviour
             {
                 Vector2 p1 = points[points.Count - 2];
                 Vector2 p2 = points[points.Count - 1];
-                float distance = Vector2.Distance(p1, p2);
-                float angle = GetAngle(p1, p2);
-
-                GameObject line = Instantiate(squarePrefab, p1, Quaternion.identity);
-                line.name = "line_" + (points.Count + 1);
-                line.tag = "DrawLine";
-                line.transform.SetParent(this.transform);
-                line.transform.Rotate(0, 0, angle);
-                line.transform.localScale = new Vector3(distance, lineWidth, 0);
-                line.GetComponent<SpriteRenderer>().sortingLayerName = "Line";
-                lineGoList.Add(line);
+                CreateLine(p1, p2);
             }
 
             // Put a circle end of the line.
-            GameObject circle = Instantiate(circlePrefab, points[points.Count - 1], Quaternion.identity);
-            circle.name = "circle_" + (circleGoList.Count + 1);
-            circle.tag = "DrawLine";
-            circle.transform.SetParent(this.transform);
-            circle.transform.localScale = new Vector3(lineWidth, lineWidth, 0);
-            circle.GetComponent<SpriteRenderer>().sortingLayerName = "Line";
-            circleGoList.Add(circle);
+            CreateCircle(points[points.Count - 1]);
 
             resetLine = false;
         }
     }
 
-    private float GetAngle(Vector2 origin, Vector2 other)
+    private void CreateLine(Vector2 p1, Vector2 p2)
     {
-        return Mathf.Atan2(other.y - origin.y, other.x - origin.x) * Mathf.Rad2Deg;
+        float distance = Vector2.Distance(p1, p2);
+        float angle = GetAngle(p1, p2);
+
+        GameObject line = Instantiate(squarePrefab, p1, Quaternion.identity);
+        line.name = "line_" + (points.Count + 1);
+        line.tag = "DrawLine";
+        line.transform.SetParent(this.transform);
+        line.transform.Rotate(0, 0, angle);
+        line.transform.localScale = new Vector3(distance, lineWidth, 0);
+        line.GetComponent<SpriteRenderer>().sortingLayerName = "Line";
+        lineGoList.Add(line);
     }
 
+    private void CreateCircle(Vector2 p)
+    {
+        GameObject circle = Instantiate(circlePrefab, p, Quaternion.identity);
+        circle.name = "circle_" + (circleGoList.Count + 1);
+        circle.tag = "DrawLine";
+        circle.transform.SetParent(this.transform);
+        circle.transform.localScale = new Vector3(lineWidth, lineWidth, 0);
+        circle.GetComponent<SpriteRenderer>().sortingLayerName = "Line";
+        circleGoList.Add(circle);
+    }
 
-    private Vector2 GetProperEndPoint(Vector2 start, Vector2 end)
+    private void FindAppropriateStartPoint(Vector2 start, Vector2 end)
+    {
+        // If start point inside an obstacle find appropriate
+        // point to start line.
+
+        Debug.Log("last: " + start);
+        Debug.Log("now: " + end);
+
+        Collider2D[] cols = Physics2D.OverlapPointAll(start);
+        foreach (Collider2D col in cols)
+        {
+            if (col.tag != "DrawLine")
+            {
+                RaycastHit2D[] hits = Physics2D.LinecastAll(end, start);
+                float lineRadius = lineWidth / 2;
+
+                foreach (RaycastHit2D hit in hits)
+                {
+                    if (hit.collider.tag != "DrawLine")
+                    {
+                        // Add new start point in here. I don't know how to do it else.
+                        Vector2 newStart = hit.point + hit.normal * lineRadius;
+                        points.Add(newStart);
+                        CreateCircle(newStart);
+                        resetLine = false;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    private Vector2 GetAppropriateEndPoint(Vector2 start, Vector2 end)
     {
         RaycastHit2D[] hits = Physics2D.LinecastAll(start, end);
         float lineRadius = lineWidth / 2;
@@ -159,8 +217,6 @@ public class DrawLine : MonoBehaviour
             }
         }
 
-
-
         return end;
     }
 
@@ -176,5 +232,10 @@ public class DrawLine : MonoBehaviour
         }
 
         return false;
+    }
+
+    private float GetAngle(Vector2 origin, Vector2 other)
+    {
+        return Mathf.Atan2(other.y - origin.y, other.x - origin.x) * Mathf.Rad2Deg;
     }
 }
